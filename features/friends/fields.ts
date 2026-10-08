@@ -18,6 +18,9 @@ export const IMAGE_MIME_TYPES: Record<string, string> = {
 
 export const IMAGE_BUCKET = "friend-images";
 
+// 사진이 없는 친구에게 보여줄 기본 프로필 이미지 (public)
+export const FALLBACK_AVATAR = "/fallback-avatar.png";
+
 // 성인(만 19세) 기준. 출생연도만 저장하므로 연 나이(올해 - 출생연도)가 19 이상이면 허용한다.
 export const ADULT_AGE = 19;
 

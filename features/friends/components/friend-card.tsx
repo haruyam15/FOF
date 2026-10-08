@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
-import { genderLabel } from "../fields";
+import { FALLBACK_AVATAR, genderLabel } from "../fields";
 import type { FriendWithImage } from "../types";
 
 export function FriendCard({ friend }: { friend: FriendWithImage }) {
@@ -8,19 +8,13 @@ export function FriendCard({ friend }: { friend: FriendWithImage }) {
     <Card>
       <CardContent className="flex gap-4">
         <div className="relative size-24 shrink-0 overflow-hidden rounded-lg bg-muted">
-          {friend.imageUrl ? (
-            <Image
-              src={friend.imageUrl}
-              alt={`${friend.name} 사진`}
-              fill
-              unoptimized
-              className="object-cover"
-            />
-          ) : (
-            <div className="flex size-full items-center justify-center text-2xl text-muted-foreground">
-              {friend.name.slice(0, 1)}
-            </div>
-          )}
+          <Image
+            src={friend.imageUrl ?? FALLBACK_AVATAR}
+            alt={friend.imageUrl ? `${friend.name} 사진` : `${friend.name} 기본 프로필 이미지`}
+            fill
+            unoptimized
+            className="object-cover"
+          />
         </div>
 
         <div className="flex min-w-0 flex-col gap-1">
