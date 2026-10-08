@@ -47,6 +47,13 @@
 - 스타일은 Tailwind 유틸리티 + shadcn/ui. 임의 CSS 파일 추가 금지
 - 한 파일이 200줄을 넘으면 분리를 고려
 
+## 4-1. 모바일 전용 규칙
+- 모든 UI는 모바일(360~430px)을 기준으로 만든다. 데스크톱 전용 스타일(`md:`, `lg:` 등)은 추가하지 않는다.
+- 터치 가능한 요소(버튼, 링크, 입력창, 라디오/체크박스 행)는 높이 44px(`h-11`) 이상
+- 입력창 글자는 16px 이상(`text-base`). `text-sm`을 입력 요소에 쓰지 않는다 (iOS 자동 확대)
+- 메인 컬럼 폭은 `max-w-md`, 상하단은 safe area(`env(safe-area-inset-*)`)를 고려
+- 숫자 입력은 `inputMode="numeric"` 등 모바일 키보드를 지정
+
 ## 5. 보안/시크릿
 - `.env.local` 커밋 금지. 새 변수는 `.env.example`에 키만 추가
 - `SUPABASE_SECRET_KEY`(service_role 권한)는 서버 코드에서만 사용, 클라이언트 번들 노출 금지

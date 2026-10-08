@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { PageTitle } from "@/components/common/page-title";
 import { buttonVariants } from "@/components/ui/button";
 import { FriendCard } from "@/features/friends/components/friend-card";
 import { FriendFilter } from "@/features/friends/components/friend-filter";
@@ -16,12 +17,15 @@ export default function FriendsPage({
 }) {
   return (
     <>
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">친구 목록</h1>
-        <Link href="/friends/new" className={buttonVariants()}>
-          친구 등록
-        </Link>
-      </div>
+      <PageTitle
+        action={
+          <Link href="/friends/new" className={buttonVariants()}>
+            친구 등록
+          </Link>
+        }
+      >
+        친구 목록
+      </PageTitle>
       <Suspense fallback={<p className="text-sm text-muted-foreground">불러오는 중...</p>}>
         <FriendListSection searchParams={searchParams} />
       </Suspense>

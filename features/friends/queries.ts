@@ -11,8 +11,6 @@ export async function getFriends(filters: FriendFilters): Promise<FriendWithImag
 
   let query = supabase.from("friends").select("*").order("created_at", { ascending: false });
   if (filters.gender) query = query.eq("gender", filters.gender);
-  if (filters.from !== undefined) query = query.gte("birth_year", filters.from);
-  if (filters.to !== undefined) query = query.lte("birth_year", filters.to);
 
   const { data, error } = await query.overrideTypes<Friend[], { merge: false }>();
   if (error) throw new Error(`친구 목록을 불러오지 못했습니다: ${error.message}`);
