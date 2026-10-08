@@ -17,7 +17,7 @@ export function FriendFilter({
   onChange: (filters: FriendFilters) => void;
 }) {
   return (
-    <div role="group" aria-label="성별 필터" className="flex gap-2">
+    <div role="group" aria-label="성별 필터" className="-mt-2 flex gap-2">
       {GENDER_OPTIONS.map((o) => {
         const active = filters.gender === o.value;
         return (
@@ -27,7 +27,7 @@ export function FriendFilter({
             aria-pressed={active}
             onClick={() => onChange({ gender: o.value })}
             className={cn(
-              "inline-flex h-11 items-center rounded-full border px-4 text-sm",
+              "relative inline-flex h-9 items-center rounded-lg border px-3 text-sm after:absolute after:-inset-y-1 after:inset-x-0 after:content-['']",
               active ? "border-brand bg-brand/20 font-medium" : "text-muted-foreground",
             )}
           >

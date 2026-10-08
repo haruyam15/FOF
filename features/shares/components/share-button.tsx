@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { createShareLink } from "../actions";
 
+const SHARE_MESSAGE = "소개해 드릴 친구에요.";
+
 type Status = "idle" | "copied" | "error";
 
 // 모바일에서는 공유 시트(카카오톡 포함)를 열고, 지원하지 않으면 링크를 복사한다.
@@ -18,13 +20,15 @@ export function ShareButton({ friendId, friendName }: { friendId: string; friend
         setStatus("error");
         return;
       }
+      // 앱마다 text와 url을 합치는 방식이 달라, 줄바꿈이 보장되도록 본문에 링크까지 넣는다.
+      // 이름은 메시지에 넣지 않는다.
+      const message = `${SHARE_MESSAGE}\n${result.url}`;
       try {
         if (navigator.share) {
-          // 이름은 링크 미리보기에 남지 않도록 메시지에 넣지 않는다.
-          await navigator.share({ title: "FOF 친구 소개", text: "소개해 드릴 친구예요.", url: result.url });
+          await navigator.share({ text: message });
           setStatus("idle");
         } else {
-          await navigator.clipboard.writeText(result.url);
+          await navigator.clipboard.writeText(message);
           setStatus("copied");
         }
       } catch (e) {
