@@ -65,3 +65,15 @@ create table public.admins (
 );
 -- 관리자는 이 테이블에 수동 INSERT 한다. RLS 정책: admins에 있는 사용자만 friends CRUD 가능
 ```
+
+## 공유 링크: `friend_shares`
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| id | uuid PK | |
+| friend_id | uuid FK → friends (on delete cascade) | 링크 하나는 친구 한 명만 가리킨다 |
+| token | text unique | 32바이트 랜덤(base64url). URL(`/s/{token}`)에는 이 값만 노출 |
+| expires_at | timestamptz | 발급 후 7일 |
+| revoked_at | timestamptz | 취소 시각(UI 미구현) |
+| created_at | timestamptz | |
+
+RLS 켜고 정책 없음(서버 service_role 전용). 친구의 유효 링크가 있으면 재사용한다.

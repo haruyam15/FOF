@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FriendFilters } from "../schema";
 import type { FriendWithImage } from "../types";
 import { FriendCard } from "./friend-card";
+import { FriendDetailModal } from "./friend-detail-modal";
 import { FriendFilter } from "./friend-filter";
 
 // 서버에서 받은 전체 목록을 클라이언트에서 필터링한다. (서버 왕복 없음)
@@ -15,6 +16,22 @@ export function FriendList({
   initialFilters: FriendFilters;
 }) {
   const [filters, setFilters] = useState(initialFilters);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // 기기 뒤로가기(또는 ← 뒤로 버튼)로 상세 보기를 닫는다.
+  useEffect(() => {
+    const onPopState = () => setSelectedId(null);
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  function openDetail(id: string) {
+    // 같은 URL로 기록만 하나 쌓아, 뒤로가기가 목록으로 돌아오게 한다.
+    window.history.pushState(null, "", window.location.href);
+    setSelectedId(id);
+  }
+
+  const selected = selectedId ? friends.find((f) => f.id === selectedId) : undefined;
 
   function handleChange(next: FriendFilters) {
     setFilters(next);
@@ -36,11 +53,12 @@ export function FriendList({
         <ul className="flex flex-col gap-3">
           {visible.map((f) => (
             <li key={f.id}>
-              <FriendCard friend={f} />
+              <FriendCard friend={f} onOpen={() => openDetail(f.id)} />
             </li>
           ))}
         </ul>
       )}
+      {selected && <FriendDetailModal friend={selected} />}
     </>
   );
 }
