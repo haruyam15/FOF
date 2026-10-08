@@ -12,7 +12,8 @@ export function FriendCard({ friend }: { friend: FriendWithImage }) {
             src={friend.imageUrl ?? FALLBACK_AVATAR}
             alt={friend.imageUrl ? `${friend.name} 사진` : `${friend.name} 기본 프로필 이미지`}
             fill
-            unoptimized
+            sizes="96px"
+            unoptimized={!friend.imageUrl}
             className="object-cover"
           />
         </div>

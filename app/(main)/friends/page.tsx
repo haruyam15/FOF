@@ -3,8 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { PageTitle } from "@/components/common/page-title";
 import { buttonVariants } from "@/components/ui/button";
-import { FriendCard } from "@/features/friends/components/friend-card";
-import { FriendFilter } from "@/features/friends/components/friend-filter";
+import { FriendList } from "@/features/friends/components/friend-list";
 import { getFriends } from "@/features/friends/queries";
 import { parseFilters } from "@/features/friends/schema";
 
@@ -38,26 +37,8 @@ async function FriendListSection({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const filters = parseFilters(await searchParams);
-  const friends = await getFriends(filters);
+  const initialFilters = parseFilters(await searchParams);
+  const friends = await getFriends();
 
-  return (
-    <>
-      <FriendFilter filters={filters} />
-      <p className="text-sm text-muted-foreground">총 {friends.length}명</p>
-      {friends.length === 0 ? (
-        <p className="py-12 text-center text-sm text-muted-foreground">
-          조건에 맞는 친구가 없어요.
-        </p>
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {friends.map((f) => (
-            <li key={f.id}>
-              <FriendCard friend={f} />
-            </li>
-          ))}
-        </ul>
-      )}
-    </>
-  );
+  return <FriendList friends={friends} initialFilters={initialFilters} />;
 }

@@ -1,11 +1,12 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
-import { revalidatePath } from "next/cache";
+import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/server";
 import { IMAGE_BUCKET, IMAGE_MIME_TYPES, MAX_IMAGE_SIZE } from "./fields";
+import { FRIENDS_CACHE_TAG } from "./queries";
 import { createFriendSchema, type FriendFormField } from "./schema";
 
 export type CreateFriendState = {
@@ -91,6 +92,6 @@ export async function createFriend(
     return { values, nonce: randomUUID(), message: "저장에 실패했어요. 잠시 후 다시 시도해 주세요." };
   }
 
-  revalidatePath("/friends");
+  updateTag(FRIENDS_CACHE_TAG);
   redirect("/friends");
 }
