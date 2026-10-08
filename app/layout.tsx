@@ -15,6 +15,8 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "FOF",
   description: "친구의 친구를 소개합니다",
+  // iOS 홈 화면 추가 시 앱처럼 실행
+  appleWebApp: { capable: true, title: "FOF", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
