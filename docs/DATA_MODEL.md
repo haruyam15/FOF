@@ -10,7 +10,8 @@
 | birth_year | smallint | N | 출생연도 |
 | religion | text | Y | 종교 |
 | job | text | N | 직업 |
-| residence | text | N | 거주지 |
+| residence | text | Y | 거주지 (`20261008020000` 마이그레이션에서 선택으로 변경) |
+| personality | text | Y | 성격 (`20261008010000` 마이그레이션에서 추가) |
 | ideal_type | text | Y | 이상형 |
 | image_path | text | Y | Storage 내 경로 |
 | created_at | timestamptz (default now()) | N | |
