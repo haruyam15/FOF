@@ -21,35 +21,8 @@
 - 2단계에서 Supabase Auth 도입 후, RLS 정책 + 사용자 세션 기반 접근으로 전환한다.
 - `SUPABASE_SECRET_KEY`는 서버 전용. 절대 `NEXT_PUBLIC_` 접두사를 붙이지 않는다.
 
-## 폴더 구조 (제안)
-```
-app/
-  (main)/
-    friends/
-      page.tsx          # 목록 + 필터
-      new/page.tsx      # 등록
-  layout.tsx
-components/
-  ui/                   # shadcn/ui 생성물 (직접 수정 최소화)
-  common/               # 공용 컴포넌트
-features/
-  friends/
-    components/         # FriendCard, FriendForm, FriendFilter
-    actions.ts          # Server Actions (create 등)
-    queries.ts          # 조회 함수 (필터 적용)
-    schema.ts           # zod 스키마
-    fields.ts           # 필드 정의 (라벨/필수/옵션)
-    types.ts
-lib/
-  supabase/
-    server.ts
-  utils.ts
-docs/
-supabase/
-  migrations/           # SQL 마이그레이션
-```
-- 기능 단위(`features/`)로 묶고, 라우트(`app/`)는 얇게 유지한다.
-- 기본은 Server Component, 상호작용이 필요한 곳만 `"use client"`.
+## 폴더 구조
+실제 구조는 [PROGRESS.md](PROGRESS.md#4-실제-폴더-구조) 참고. 기능 단위(`features/`)로 묶고, 라우트(`app/`)는 얇게 유지한다. 기본은 Server Component, 상호작용이 필요한 곳만 `"use client"`.
 
 ## 환경변수
 `.env.example` 참고. 실제 값은 `.env.local`에만 두고 커밋하지 않는다.

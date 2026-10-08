@@ -3,18 +3,19 @@
 ## Phase 0 — 준비
 - [x] Next.js 프로젝트 생성
 - [x] 문서 작성 (PRD, 데이터 모델, 아키텍처, 컨벤션)
-- [ ] GitHub 저장소 연결
-- [ ] Tailwind + shadcn/ui 초기 설정
-- [ ] Supabase 프로젝트 생성, 환경변수 설정
-- [ ] MVP 접근 제어 방식 결정 (PRD 미결 사항 #1)
+- [x] GitHub 저장소 연결
+- [x] Tailwind + shadcn/ui 초기 설정
+- [x] Supabase 프로젝트 생성, 환경변수 설정
+- [x] MVP 접근 제어 방식 결정: 배포 URL 비공개 + 서버 경유 접근 (PRD 미결 사항 #1)
 
-## Phase 1 — MVP
-- [ ] `friends` 테이블 + Storage 버킷 마이그레이션
-- [ ] 친구 등록 폼 (zod 검증, 이미지 업로드)
-- [ ] 친구 목록 (카드 UI, empty state)
-- [ ] 필터: 성별 (URL 쿼리 기반)
+## Phase 1 — MVP (기능 구현 완료, 배포/점검 남음. 상세는 [PROGRESS](PROGRESS.md))
+- [x] `friends` 테이블 + Storage 버킷 마이그레이션
+- [x] 친구 등록 폼 (zod 검증, 이미지 업로드)
+- [x] 친구 목록 (카드 UI, empty state)
+- [x] 필터: 성별 (URL 쿼리 기반)
 - [ ] (보류) 필터: 출생연도 범위
-- [ ] 모바일 반응형 점검
+- [ ] 목록 페이지네이션 (1,000명 초과 시 잘림 방지)
+- [ ] 모바일 실기기 점검
 - [ ] Vercel 배포
 
 ## Phase 2 — 권한/관리자

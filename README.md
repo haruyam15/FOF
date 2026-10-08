@@ -34,6 +34,7 @@ pnpm dev                     # http://localhost:3000
 | [개발 컨벤션](docs/CONVENTIONS.md) | 브랜치, 커밋, 네이밍, 코드 스타일 |
 | [디자인 시스템](docs/DESIGN_SYSTEM.md) | 색상, 그림자 등 디자인 토큰 |
 | [로드맵](docs/ROADMAP.md) | 단계별 체크리스트 |
+| [진행 기록](docs/PROGRESS.md) | 현재 상태, 결정 사항, 주의점, 다음 계획 |
 
 ## 주의
 등록되는 정보는 개인정보입니다. 실제 데이터를 저장소·로그·스크린샷에 남기지 마세요.
