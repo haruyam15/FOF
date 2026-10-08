@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { requireAdmin } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/server";
 import { IMAGE_BUCKET, IMAGE_MIME_TYPES, MAX_IMAGE_SIZE } from "./fields";
 import { FRIENDS_CACHE_TAG } from "./queries";
@@ -25,6 +26,7 @@ export async function createFriend(
   _prev: CreateFriendState,
   formData: FormData,
 ): Promise<CreateFriendState> {
+  await requireAdmin();
   const values: CreateFriendState["values"] = {};
   for (const key of FIELD_KEYS) {
     const v = formData.get(key);

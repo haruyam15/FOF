@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { logout } from "@/features/auth/actions";
 
 export default function MainLayout({ children }: LayoutProps<"/">) {
   return (
@@ -15,6 +16,11 @@ export default function MainLayout({ children }: LayoutProps<"/">) {
           <Link href="/friends/new" className="flex h-11 items-center px-3">
             친구 등록
           </Link>
+          <form action={logout}>
+            <button type="submit" className="flex h-11 items-center px-3 text-muted-foreground">
+              로그아웃
+            </button>
+          </form>
         </nav>
       </header>
       <main className="flex flex-1 flex-col gap-6">{children}</main>

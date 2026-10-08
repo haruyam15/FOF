@@ -5,6 +5,7 @@ import { PageTitle } from "@/components/common/page-title";
 import { buttonVariants } from "@/components/ui/button";
 import { FriendList } from "@/features/friends/components/friend-list";
 import { getFriends } from "@/features/friends/queries";
+import { requireAdmin } from "@/lib/auth/session";
 import { parseFilters } from "@/features/friends/schema";
 
 export const metadata: Metadata = { title: "친구 목록 | FOF" };
@@ -37,6 +38,7 @@ async function FriendListSection({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  await requireAdmin();
   const initialFilters = parseFilters(await searchParams);
   const friends = await getFriends();
 
