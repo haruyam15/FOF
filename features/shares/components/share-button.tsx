@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { createShareLink } from "../actions";
 
-const SHARE_MESSAGE = "소개해 드릴 친구에요.";
+const SHARE_MESSAGE = "친구의 친구를 소개합니다.";
 
 type Status = "idle" | "copied" | "error";
 

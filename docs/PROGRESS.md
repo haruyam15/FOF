@@ -19,7 +19,7 @@
 | 성별 필터 | `friend-filter.tsx`, `friend-list.tsx` | 전체/남성/여성 버튼. **전체 목록을 한 번 받아 클라이언트에서 필터**(서버 왕복 없음), URL `?gender=`는 `replaceState`로만 갱신 |
 | 목록 캐시 | `features/friends/queries.ts` | `unstable_cache`(30분, 태그 `friends`) + 등록 시 `updateTag`. 서명 URL(2시간)이 캐시 동안 고정돼 브라우저/이미지 최적화 캐시 적중 |
 | 임시 로그인 | `proxy.ts`, `features/auth/`, `lib/auth/`, `app/login/` | 공용 비밀번호(`ADMIN_PASSWORD`) → 서명된 httpOnly 쿠키(30일). `/login`, `/s/*` 외 전부 로그인 필요. 서버 액션·목록 조회에서도 재검사 |
-| 프로필 공유 | `features/shares/`, `app/s/[token]/` | 공유 버튼 → 링크 발급(친구당 유효 링크 재사용, 7일) → `navigator.share`(미지원 시 복사). 메시지: "소개해 드릴 친구에요.\n링크". 링크 화면은 헤더·이동 없음, noindex, 미리보기는 고정 문구 |
+| 프로필 공유 | `features/shares/`, `app/s/[token]/` | 공유 버튼 → 링크 발급(친구당 유효 링크 재사용, 7일) → `navigator.share`(미지원 시 복사). 메시지: "친구의 친구를 소개합니다.\n링크". 링크 화면은 헤더·이동 없음, noindex, 미리보기는 고정 문구 |
 | 상세 보기 | `friend-detail-modal.tsx`, `friend-profile.tsx` | 카드(사진 포함) 클릭 → 꽉 찬 화면, `FriendProfile`은 공유 화면과 같은 컴포넌트. 열 때 `pushState`, 닫기는 `history.back()`/뒤로가기 |
 | PWA | `app/manifest.ts`, `public/icon-*.png`, `app/apple-icon.png` | 홈 화면 추가용. 아이콘은 흰 배경+여백(원본 `app/icon.png`는 투명·여백 없음). 서비스 워커 없음(오프라인 미지원) |
 | 사진 업로드 (최대 3장) | `features/friends/components/image-picker.tsx`, `lib/compress-image.ts` | 브라우저에서 장마다 1600px JPEG로 압축, 고른 순서대로 비공개 버킷에 저장(`friends.image_paths`). 첫 번째가 목록 대표 이미지, 상세·공유 화면은 `image-carousel.tsx`(scroll-snap)로 넘겨 봄 |
