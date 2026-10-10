@@ -1,12 +1,28 @@
 "use client";
 
 import { ChevronLeft } from "lucide-react";
-import { useEffect } from "react";
+import Link from "next/link";
+import { useEffect, useState, useTransition } from "react";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { deleteFriend } from "../actions";
 import type { FriendWithImage } from "../types";
 import { FriendProfile } from "./friend-profile";
 
 // 꽉 찬 화면 상세 보기. 닫기는 history.back()으로 하고, 기기 뒤로가기와 같은 경로(popstate)로 처리한다.
 export function FriendDetailModal({ friend }: { friend: FriendWithImage }) {
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string>();
+
+  function handleDelete() {
+    if (!window.confirm(`${friend.name}님을 삭제할까요?\n사진과 공유 링크도 함께 삭제되고 되돌릴 수 없어요.`)) return;
+    setError(undefined);
+    startTransition(async () => {
+      const result = await deleteFriend(friend.id);
+      if (result.error) setError(result.error);
+      else window.history.back(); // 상세 보기용으로 쌓은 기록을 걷어내며 닫는다.
+    });
+  }
+
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -33,7 +49,19 @@ export function FriendDetailModal({ friend }: { friend: FriendWithImage }) {
             <ChevronLeft className="size-6" aria-hidden="true" />
           </button>
         </div>
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <FriendProfile friend={friend} />
+        <div className="mt-auto flex justify-end gap-2 pt-4">
+          <Link
+            href={`/friends/${friend.id}/edit`}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            수정
+          </Link>
+          <Button variant="destructive" onClick={handleDelete} disabled={pending}>
+            {pending ? "삭제 중..." : "삭제"}
+          </Button>
+        </div>
       </div>
     </div>
   );

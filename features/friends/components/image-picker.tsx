@@ -5,11 +5,13 @@ import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { compressImage } from '@/lib/compress-image';
 import { MAX_IMAGES } from '../fields';
+import type { ExistingImage } from '../types';
 
 // 압축 전 원본 허용 크기 (너무 큰 파일은 브라우저 메모리 문제가 있어 막는다)
 const MAX_ORIGINAL_SIZE = 30 * 1024 * 1024;
 
-type Picked = { key: string; file: File; url: string };
+// path가 있으면 이미 저장된 사진(서버에는 경로만 보낸다), 없으면 새로 고른 압축본.
+type Picked = { key: string; file?: File; path?: string; url: string };
 
 type ImagePickerProps = {
   id: string;
@@ -19,6 +21,10 @@ type ImagePickerProps = {
   onBusyChange?: (busy: boolean) => void;
   /** 선택 단계에서 생긴 에러(용량 초과, 변환 실패 등) */
   onErrorChange?: (message: string | undefined) => void;
+  /** 수정 화면에서 이미 저장된 사진. 새로 고른 사진보다 앞에 표시된다. */
+  initialImages?: ExistingImage[];
+  /** 유지하는 기존 사진 경로를 보낼 폼 필드 이름 */
+  keepName?: string;
 };
 
 // 사진을 최대 MAX_IMAGES장까지 고르는 썸네일형 입력. 고른 순서가 저장 순서이고 첫 번째가 대표 사진이다.
@@ -29,11 +35,15 @@ export function ImagePicker({
   invalid,
   onBusyChange,
   onErrorChange,
+  initialImages = [],
+  keepName = 'keepImage',
 }: ImagePickerProps) {
   // 파일 선택용 input(이름 없음)과 폼 제출용 input(name 있음)을 분리한다. 후자에 압축본 목록을 채운다.
   const pickerRef = useRef<HTMLInputElement>(null);
   const submitRef = useRef<HTMLInputElement>(null);
-  const [items, setItems] = useState<Picked[]>([]);
+  const [items, setItems] = useState<Picked[]>(() =>
+    initialImages.map((img) => ({ key: img.path, path: img.path, url: img.url })),
+  );
   const [busy, setBusy] = useState(false);
   const itemsRef = useRef(items);
 
@@ -41,14 +51,14 @@ export function ImagePicker({
     itemsRef.current = items;
     if (!submitRef.current) return;
     const dt = new DataTransfer();
-    for (const item of items) dt.items.add(item.file);
+    for (const item of items) if (item.file) dt.items.add(item.file);
     submitRef.current.files = dt.files;
   }, [items]);
 
   // 언마운트 시 남아 있는 미리보기 URL 해제
   useEffect(() => {
     return () => {
-      for (const item of itemsRef.current) URL.revokeObjectURL(item.url);
+      for (const item of itemsRef.current) if (item.file) URL.revokeObjectURL(item.url);
     };
   }, []);
 
@@ -61,7 +71,7 @@ export function ImagePicker({
     onErrorChange?.(undefined);
     setItems((prev) => {
       const target = prev.find((p) => p.key === key);
-      if (target) URL.revokeObjectURL(target.url);
+      if (target?.file) URL.revokeObjectURL(target.url);
       return prev.filter((p) => p.key !== key);
     });
   }
@@ -119,6 +129,9 @@ export function ImagePicker({
         tabIndex={-1}
       />
       <input ref={submitRef} name={name} type="file" className="sr-only" tabIndex={-1} aria-hidden />
+      {items.map(
+        (item) => item.path && <input key={item.key} type="hidden" name={keepName} value={item.path} />,
+      )}
 
       <ul className="flex flex-wrap gap-2">
         {items.map((item, i) => (

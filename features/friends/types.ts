@@ -15,3 +15,7 @@ export type Friend = {
 };
 
 export type FriendWithImage = Friend & { imageUrls: string[] };
+
+export type ExistingImage = { path: string; url: string };
+
+export type FriendForEdit = FriendWithImage & { images: ExistingImage[] };

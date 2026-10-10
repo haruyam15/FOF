@@ -2,7 +2,7 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/server";
 import { signImagePaths, urlsForPaths } from "./images";
-import type { Friend, FriendWithImage } from "./types";
+import type { Friend, FriendForEdit, FriendWithImage } from "./types";
 
 export const FRIENDS_CACHE_TAG = "friends";
 
@@ -33,4 +33,25 @@ async function fetchFriends(): Promise<FriendWithImage[]> {
   );
 
   return data.map((f) => ({ ...f, imageUrls: urlsForPaths(f.image_paths, urlByPath) }));
+}
+
+// 수정 화면용 단건 조회. 캐시하지 않는다(수정 직전의 최신 값이 필요).
+export async function getFriendById(id: string): Promise<FriendForEdit | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("friends")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle<Friend>();
+  if (error) throw new Error(`친구 정보를 불러오지 못했습니다: ${error.message}`);
+  if (!data) return null;
+
+  const urlByPath = await signImagePaths(supabase, data.image_paths, SIGNED_URL_TTL_SEC);
+  // 수정 화면은 유지/삭제할 사진을 경로로 구분해야 하므로 [경로, URL] 쌍으로 넘긴다.
+  const images = data.image_paths.flatMap((path) => {
+    const url = urlByPath.get(path);
+    return url ? [{ path, url }] : [];
+  });
+  return { ...data, imageUrls: urlsForPaths(data.image_paths, urlByPath), images };
 }

@@ -23,6 +23,7 @@
 | 상세 보기 | `friend-detail-modal.tsx`, `friend-profile.tsx` | 카드(사진 포함) 클릭 → 꽉 찬 화면, `FriendProfile`은 공유 화면과 같은 컴포넌트. 열 때 `pushState`, 닫기는 `history.back()`/뒤로가기 |
 | PWA | `app/manifest.ts`, `public/icon-*.png`, `app/apple-icon.png` | 홈 화면 추가용. 아이콘은 흰 배경+여백(원본 `app/icon.png`는 투명·여백 없음). 서비스 워커 없음(오프라인 미지원) |
 | 사진 업로드 (최대 3장) | `features/friends/components/image-picker.tsx`, `lib/compress-image.ts` | 브라우저에서 장마다 1600px JPEG로 압축, 고른 순서대로 비공개 버킷에 저장(`friends.image_paths`). 첫 번째가 목록 대표 이미지, 상세·공유 화면은 `image-carousel.tsx`(scroll-snap)로 넘겨 봄 |
+| 친구 수정·삭제 | `app/(main)/friends/[id]/edit`, `actions.ts`(`updateFriend`, `deleteFriend`), `friend-detail-modal.tsx` | 상세 화면 상단의 수정/삭제 버튼. 수정은 등록 폼 재사용(`FriendForm friend=…`), 기존 사진은 `keepImage`(경로)로 유지·삭제, 새 사진은 뒤에 추가. 삭제는 `confirm` 후 행+Storage 사진 삭제(공유 링크는 cascade) |
 | 기본 아바타 | `public/fallback-avatar.png` | 사진 없는 친구 카드에 표시 |
 | 공통 UI | `components/common/form-field.tsx`, `page-title.tsx` | FormField(필수 `*`/선택 표시/에러), sticky 제목 |
 
@@ -97,10 +98,10 @@ docs/                          PRD, DATA_MODEL, ARCHITECTURE, CONVENTIONS, DESIG
 ## 6. 알려진 한계 / 미확인
 - 목록은 전체 조회라 **1,000명 초과 시 Supabase 기본 한도로 일부가 조용히 잘림** → 페이지네이션 필요.
 - 사진 URL은 있는데 파일 로드가 실패하면(만료/삭제) 기본 아바타로 대체되지 않고 빈 칸.
-- 등록 폼에서 사진을 장별로 삭제할 수 있지만, 이미 고른 사진의 순서를 바꾸려면 삭제 후 다시 골라야 함. 친구 정보(사진 포함) 수정 화면은 없음.
+- 등록 폼에서 사진을 장별로 삭제할 수 있지만, 이미 고른 사진의 순서를 바꾸려면 삭제 후 다시 골라야 함. 수정 화면에서도 사진 순서 변경은 불가(삭제 후 추가).
 - Server Action 본문 한도를 16MB로 올림(3장 × 최대 5MB). 압축본 실제 크기는 미확인.
 - 서버 에러로 폼이 다시 그려지면 선택한 사진이 비워짐 (브라우저 제약).
-- 친구 삭제 시 Storage 사진(최대 3장)도 함께 지워야 함 (행만 지우면 파일이 남음).
+- 수정·삭제 기능은 타입체크·린트만 통과, 실제 동작은 미확인(사용자 확인 필요). 삭제 시 Storage 정리가 실패하면 파일이 고아로 남을 수 있음.
 - 다크 모드 그림자가 거의 보이지 않음 (다크 모드 미설계).
 - 기본 아바타/ImagePicker 선택-변경 동작, 모바일 실기기 레이아웃은 사용자가 직접 확인 중이었음 (자동 검증은 렌더 HTML/CSS 수준까지만 함).
 - 접근 제어: **공용 비밀번호 하나**(4자리 숫자 `2026`)로 보호 중. 실패 시 1초 지연만 있고 시도 횟수 제한은 없음 → 배포용은 더 긴 비밀번호로 바꾸고, Phase 2에서 Supabase Auth로 교체.
@@ -121,11 +122,11 @@ docs/                          PRD, DATA_MODEL, ARCHITECTURE, CONVENTIONS, DESIG
 1. 로그인 수단 결정(카카오 vs 구글) → Supabase Auth 연동(`PUBLISHABLE_KEY`, `JWKS_URL`), **임시 비밀번호 로그인 대체**(`lib/auth`, `proxy.ts`, `features/auth` 교체 지점)
 2. `admins` 테이블(`user_id` PK → `auth.users`), 관리자 2명 **수동 INSERT**
 3. RLS 정책 전환(관리자만 friends CRUD), 서버 접근을 `secret key`에서 사용자 세션 기반으로. 공유 화면(`/s/*`)은 토큰 검증 후 서버 조회라 별도 고려
-4. **친구 삭제**: 행 + Storage 사진 함께 삭제(공유 링크는 FK cascade), 확인 다이얼로그, 삭제 시 `updateTag(FRIENDS_CACHE_TAG)`
+4. ~~친구 삭제~~ → 구현됨(관리자 권한 분리만 Phase 2에서)
 5. **관리자 페이지**: 등록 항목 추가/삭제/필수 변경 → `field_definitions` + `friends.extra jsonb` 전환 (`features/friends/fields.ts`가 전환 지점). 상세/공유 화면(`friend-profile.tsx`)도 필드 정의 기반으로
 
 ### C. 백로그
-공유 링크 취소/이력 UI, 상세 보기 별도 URL(인터셉팅 라우트), 출생연도 필터 복구, 친구 정보 수정, 정렬/검색, 키·직업·거주지 필터, 매칭 이력, 썸네일 생성, 이미지 로드 실패 fallback, ImagePicker 취소, 다크 모드, 디자인 토큰 확장, 100명 초과 시 서버 필터+커서 페이지네이션, 카카오 SDK 카드형 공유(앱 키·도메인 등록 필요), 앱 스토어 출시가 필요하면 Capacitor 래핑(서버 URL 로드 방식)
+공유 링크 취소/이력 UI, 상세 보기 별도 URL(인터셉팅 라우트), 출생연도 필터 복구, 정렬/검색, 키·직업·거주지 필터, 매칭 이력, 썸네일 생성, 이미지 로드 실패 fallback, ImagePicker 취소, 다크 모드, 디자인 토큰 확장, 100명 초과 시 서버 필터+커서 페이지네이션, 카카오 SDK 카드형 공유(앱 키·도메인 등록 필요), 앱 스토어 출시가 필요하면 Capacitor 래핑(서버 URL 로드 방식)
 
 ## 8. 작업 방식 (사용자 선호)
 - 응답/주석은 한국어. 코드 식별자는 영어.

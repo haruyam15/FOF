@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
-import { createFriend, type CreateFriendState } from '../actions';
+import { createFriend, updateFriend, type CreateFriendState } from '../actions';
+import type { FriendForEdit } from '../types';
 import { ImagePicker } from './image-picker';
 import {
   BIRTH_YEAR_MIN,
@@ -20,12 +21,28 @@ import {
 
 const initialState: CreateFriendState = {};
 
-export function FriendForm() {
+function toValues(f: FriendForEdit): NonNullable<CreateFriendState['values']> {
+  return {
+    name: f.name,
+    gender: f.gender,
+    heightCm: String(f.height_cm),
+    birthYear: String(f.birth_year),
+    religion: f.religion ?? '',
+    job: f.job,
+    residence: f.residence ?? '',
+    personality: f.personality ?? '',
+    idealType: f.ideal_type ?? '',
+  };
+}
+
+// friend가 있으면 수정, 없으면 등록.
+export function FriendForm({ friend }: { friend?: FriendForEdit }) {
   const [state, formAction, pending] = useActionState(
-    createFriend,
+    friend ? updateFriend.bind(null, friend.id) : createFriend,
     initialState,
   );
-  const { errors = {}, values = {} } = state;
+  const { errors = {} } = state;
+  const values = state.values ?? (friend ? toValues(friend) : {});
   const [compressing, setCompressing] = useState(false);
   const [imageError, setImageError] = useState<string>();
 
@@ -45,6 +62,7 @@ export function FriendForm() {
             <ImagePicker
               id={id}
               name="image"
+              initialImages={friend?.images}
               invalid={invalid}
               onBusyChange={setCompressing}
               onErrorChange={setImageError}
@@ -204,7 +222,7 @@ export function FriendForm() {
       {state.message && <FieldError>{state.message}</FieldError>}
 
       <Button type="submit" size="lg" disabled={pending || compressing}>
-        {pending ? '등록 중...' : '친구 등록'}
+        {friend ? (pending ? '저장 중...' : '저장') : pending ? '등록 중...' : '친구 등록'}
       </Button>
     </form>
   );
