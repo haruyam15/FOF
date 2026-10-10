@@ -9,8 +9,9 @@ export type Friend = {
   job: string;
   residence: string | null;
   ideal_type: string | null;
-  image_path: string | null;
+  // Storage 경로. 배열 순서가 표시 순서이고 첫 번째가 대표 이미지.
+  image_paths: string[];
   created_at: string;
 };
 
-export type FriendWithImage = Friend & { imageUrl: string | null };
+export type FriendWithImage = Friend & { imageUrls: string[] };

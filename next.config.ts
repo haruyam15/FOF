@@ -17,8 +17,8 @@ const nextConfig: NextConfig = {
   /* config options here */
   experimental: {
     serverActions: {
-      // 친구 이미지 최대 5MB + multipart 오버헤드
-      bodySizeLimit: "6mb",
+      // 친구 이미지 최대 3장 × 5MB + multipart 오버헤드 (클라이언트 압축본은 보통 1MB 안팎)
+      bodySizeLimit: "16mb",
     },
   },
   turbopack: {

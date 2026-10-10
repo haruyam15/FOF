@@ -13,7 +13,7 @@
 | residence | text | Y | 거주지 (`20261008020000` 마이그레이션에서 선택으로 변경) |
 | personality | text | Y | 성격 (`20261008010000` 마이그레이션에서 추가) |
 | ideal_type | text | Y | 이상형 |
-| image_path | text | Y | Storage 내 경로 |
+| image_paths | text[] (기본 `{}`, 최대 3개) | N | Storage 경로. 배열 순서가 표시 순서, 첫 번째가 대표 이미지 (`20261010000000` 마이그레이션에서 `image_path`를 대체) |
 | created_at | timestamptz (default now()) | N | |
 | updated_at | timestamptz (default now()) | N | |
 

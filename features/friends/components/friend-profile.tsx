@@ -1,5 +1,5 @@
-import Image from "next/image";
-import { FALLBACK_AVATAR, genderLabel } from "../fields";
+import { genderLabel } from "../fields";
+import { ImageCarousel } from "./image-carousel";
 import type { FriendWithImage } from "../types";
 
 // 프로필 카드. 공유 링크 화면과 목록의 상세 보기에서 같이 쓴다. 링크·이동 수단을 두지 않는다.
@@ -14,17 +14,7 @@ export function FriendProfile({ friend }: { friend: FriendWithImage }) {
 
   return (
     <article className="overflow-hidden rounded-xl bg-card text-card-foreground ring-1 ring-foreground/10">
-      <div className="relative aspect-square w-full bg-muted">
-        <Image
-          src={friend.imageUrl ?? FALLBACK_AVATAR}
-          alt={friend.imageUrl ? `${friend.name} 사진` : `${friend.name} 기본 프로필 이미지`}
-          fill
-          priority
-          sizes="(max-width: 448px) 100vw, 448px"
-          unoptimized={!friend.imageUrl}
-          className="object-cover"
-        />
-      </div>
+      <ImageCarousel urls={friend.imageUrls} name={friend.name} />
       <div className="flex flex-col gap-4 p-4">
         <div>
           <h1 className="text-xl font-semibold">{friend.name}</h1>

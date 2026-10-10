@@ -1,6 +1,6 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/server";
-import { IMAGE_BUCKET } from "@/features/friends/fields";
+import { signImagePaths, urlsForPaths } from "@/features/friends/images";
 import type { Friend, FriendWithImage } from "@/features/friends/types";
 
 const IMAGE_URL_TTL_SEC = 60 * 60;
@@ -31,12 +31,6 @@ export async function getSharedFriend(token: string): Promise<FriendWithImage | 
   const friend = data as Friend | null;
   if (!friend) return null;
 
-  let imageUrl: string | null = null;
-  if (friend.image_path) {
-    const { data } = await supabase.storage
-      .from(IMAGE_BUCKET)
-      .createSignedUrl(friend.image_path, IMAGE_URL_TTL_SEC);
-    imageUrl = data?.signedUrl ?? null;
-  }
-  return { ...friend, imageUrl };
+  const urlByPath = await signImagePaths(supabase, friend.image_paths, IMAGE_URL_TTL_SEC);
+  return { ...friend, imageUrls: urlsForPaths(friend.image_paths, urlByPath) };
 }

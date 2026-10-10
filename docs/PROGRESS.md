@@ -8,7 +8,7 @@
 - **배포는 아직**: Vercel 프로젝트 연결·환경변수 설정은 사용자가 진행(저장소에 `.vercel` 없음). 배포 후 폰 실기기 점검(공유 시트, 홈 화면 추가) 필요.
 - **아직 안 한 것**: Vercel 배포 확인, 모바일 실기기 점검, Phase 2 전부(Supabase Auth 로그인/admins/RLS/삭제/관리자 페이지).
 - 저장소: https://github.com/haruyam15/FOF.git (브랜치는 `main` 하나)
-- Supabase 마이그레이션 4건(`20261008000000`, `…010000`, `…020000`, `…030000`) 모두 적용됨(사용자 확인).
+- Supabase 마이그레이션 4건(`20261008000000`, `…010000`, `…020000`, `…030000`) 적용됨(사용자 확인). **`20261010000000_friends_multiple_images.sql`(사진 3장, `image_path` 삭제)은 작성만 했고 미적용** — 적용 후 동작 확인 필요.
 - **성능 기준: 친구 최대 100명** ([CONVENTIONS](CONVENTIONS.md) 8장).
 
 ## 2. 구현된 기능
@@ -22,7 +22,7 @@
 | 프로필 공유 | `features/shares/`, `app/s/[token]/` | 공유 버튼 → 링크 발급(친구당 유효 링크 재사용, 7일) → `navigator.share`(미지원 시 복사). 메시지: "소개해 드릴 친구에요.\n링크". 링크 화면은 헤더·이동 없음, noindex, 미리보기는 고정 문구 |
 | 상세 보기 | `friend-detail-modal.tsx`, `friend-profile.tsx` | 카드(사진 포함) 클릭 → 꽉 찬 화면, `FriendProfile`은 공유 화면과 같은 컴포넌트. 열 때 `pushState`, 닫기는 `history.back()`/뒤로가기 |
 | PWA | `app/manifest.ts`, `public/icon-*.png`, `app/apple-icon.png` | 홈 화면 추가용. 아이콘은 흰 배경+여백(원본 `app/icon.png`는 투명·여백 없음). 서비스 워커 없음(오프라인 미지원) |
-| 사진 업로드 | `components/image-picker.tsx`, `lib/compress-image.ts` | 브라우저에서 1600px JPEG로 자동 압축, 비공개 버킷에 저장, 목록은 1시간짜리 signed URL |
+| 사진 업로드 (최대 3장) | `features/friends/components/image-picker.tsx`, `lib/compress-image.ts` | 브라우저에서 장마다 1600px JPEG로 압축, 고른 순서대로 비공개 버킷에 저장(`friends.image_paths`). 첫 번째가 목록 대표 이미지, 상세·공유 화면은 `image-carousel.tsx`(scroll-snap)로 넘겨 봄 |
 | 기본 아바타 | `public/fallback-avatar.png` | 사진 없는 친구 카드에 표시 |
 | 공통 UI | `components/common/form-field.tsx`, `page-title.tsx` | FormField(필수 `*`/선택 표시/에러), sticky 제목 |
 
@@ -39,6 +39,7 @@
 | 나이는 출생연도(`birth_year`)로 저장 | 해가 바뀌어도 값이 변하지 않음 |
 | 폼 검증은 서버(zod)만, `react-hook-form` 미사용 | 폼 1개, 서버 검증이 필수라 이중 관리 불필요. 폼에 `noValidate`를 달아 서버 에러(빨간 테두리+문구)를 한 번에 표시 |
 | `cacheComponents` 끔 | 전부 동적 데이터라 이점이 없고, Activity로 폼 상태가 남는 문제·`new Date()` 제약만 생김. 캐싱이 필요해지면 다시 검토 |
+| 사진 여러 장은 `image_paths text[]` 컬럼, 대표 변경/순서 변경 없음(고른 순서 그대로) | 100명 규모에 별도 테이블은 과함. 배포 전이라 기존 `image_path`는 같은 마이그레이션에서 옮기고 삭제 |
 | 이미지는 클라이언트에서 압축 | 폰 사진(3~12MB)이 Server Action 본문 한도(6MB)를 넘어 요청 자체가 거부되던 문제 해결 |
 | 출생연도 필터 **보류** | 사용자 요청. 쿼리(`gte/lte birth_year`)·UI는 git 이력에서 복구 가능 |
 | 모바일 전용 서비스 | 컬럼 폭 `max-w-md`, 터치 44px, 입력 글자 16px, `md:` 이상 스타일 금지 ([CONVENTIONS](CONVENTIONS.md) 4-1) |
@@ -96,9 +97,10 @@ docs/                          PRD, DATA_MODEL, ARCHITECTURE, CONVENTIONS, DESIG
 ## 6. 알려진 한계 / 미확인
 - 목록은 전체 조회라 **1,000명 초과 시 Supabase 기본 한도로 일부가 조용히 잘림** → 페이지네이션 필요.
 - 사진 URL은 있는데 파일 로드가 실패하면(만료/삭제) 기본 아바타로 대체되지 않고 빈 칸.
-- 등록 폼에서 한 번 고른 사진을 등록 전에 완전히 취소하는 방법이 없음(변경만 가능).
+- 등록 폼에서 사진을 장별로 삭제할 수 있지만, 이미 고른 사진의 순서를 바꾸려면 삭제 후 다시 골라야 함. 친구 정보(사진 포함) 수정 화면은 없음.
+- Server Action 본문 한도를 16MB로 올림(3장 × 최대 5MB). 압축본 실제 크기는 미확인.
 - 서버 에러로 폼이 다시 그려지면 선택한 사진이 비워짐 (브라우저 제약).
-- 친구 삭제 시 Storage 사진도 함께 지워야 함 (행만 지우면 파일이 남음).
+- 친구 삭제 시 Storage 사진(최대 3장)도 함께 지워야 함 (행만 지우면 파일이 남음).
 - 다크 모드 그림자가 거의 보이지 않음 (다크 모드 미설계).
 - 기본 아바타/ImagePicker 선택-변경 동작, 모바일 실기기 레이아웃은 사용자가 직접 확인 중이었음 (자동 검증은 렌더 HTML/CSS 수준까지만 함).
 - 접근 제어: **공용 비밀번호 하나**(4자리 숫자 `2026`)로 보호 중. 실패 시 1초 지연만 있고 시도 횟수 제한은 없음 → 배포용은 더 긴 비밀번호로 바꾸고, Phase 2에서 Supabase Auth로 교체.

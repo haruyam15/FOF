@@ -1,13 +1,15 @@
 'use client';
 
-import { CameraIcon, ImagePlusIcon } from 'lucide-react';
+import { ImagePlusIcon, XIcon } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { compressImage } from '@/lib/compress-image';
+import { MAX_IMAGES } from '../fields';
 
 // 압축 전 원본 허용 크기 (너무 큰 파일은 브라우저 메모리 문제가 있어 막는다)
 const MAX_ORIGINAL_SIZE = 30 * 1024 * 1024;
+
+type Picked = { key: string; file: File; url: string };
 
 type ImagePickerProps = {
   id: string;
@@ -19,7 +21,8 @@ type ImagePickerProps = {
   onErrorChange?: (message: string | undefined) => void;
 };
 
-// 사진 한 장을 고르는 썸네일형 입력. 선택하면 브라우저에서 압축한 파일로 교체해 폼에 담는다.
+// 사진을 최대 MAX_IMAGES장까지 고르는 썸네일형 입력. 고른 순서가 저장 순서이고 첫 번째가 대표 사진이다.
+// 선택하면 브라우저에서 압축하고, 압축본 전체를 `name` 파일 input에 담아 폼과 함께 제출한다.
 export function ImagePicker({
   id,
   name,
@@ -27,47 +30,72 @@ export function ImagePicker({
   onBusyChange,
   onErrorChange,
 }: ImagePickerProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [previewUrl, setPreviewUrl] = useState<string>();
+  // 파일 선택용 input(이름 없음)과 폼 제출용 input(name 있음)을 분리한다. 후자에 압축본 목록을 채운다.
+  const pickerRef = useRef<HTMLInputElement>(null);
+  const submitRef = useRef<HTMLInputElement>(null);
+  const [items, setItems] = useState<Picked[]>([]);
   const [busy, setBusy] = useState(false);
+  const itemsRef = useRef(items);
 
   useEffect(() => {
+    itemsRef.current = items;
+    if (!submitRef.current) return;
+    const dt = new DataTransfer();
+    for (const item of items) dt.items.add(item.file);
+    submitRef.current.files = dt.files;
+  }, [items]);
+
+  // 언마운트 시 남아 있는 미리보기 URL 해제
+  useEffect(() => {
     return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      for (const item of itemsRef.current) URL.revokeObjectURL(item.url);
     };
-  }, [previewUrl]);
+  }, []);
 
   function setBusyState(value: boolean) {
     setBusy(value);
     onBusyChange?.(value);
   }
 
-  function clear() {
-    if (inputRef.current) inputRef.current.value = '';
-    setPreviewUrl(undefined);
+  function remove(key: string) {
+    onErrorChange?.(undefined);
+    setItems((prev) => {
+      const target = prev.find((p) => p.key === key);
+      if (target) URL.revokeObjectURL(target.url);
+      return prev.filter((p) => p.key !== key);
+    });
   }
 
   async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const input = e.currentTarget;
-    const file = input.files?.[0];
+    const selected = Array.from(input.files ?? []);
+    // 같은 파일을 다시 고를 수 있도록 선택 input은 바로 비운다.
+    input.value = '';
     onErrorChange?.(undefined);
-    if (!file) return;
+    if (selected.length === 0) return;
 
-    if (file.size > MAX_ORIGINAL_SIZE) {
-      clear();
-      onErrorChange?.('이미지는 30MB 이하만 선택할 수 있어요.');
+    const remaining = MAX_IMAGES - items.length;
+    if (selected.length > remaining) {
+      onErrorChange?.(`사진은 최대 ${MAX_IMAGES}장까지 올릴 수 있어요.`);
+      return;
+    }
+    if (selected.some((f) => f.size > MAX_ORIGINAL_SIZE)) {
+      onErrorChange?.('이미지는 한 장당 30MB 이하만 선택할 수 있어요.');
       return;
     }
 
     setBusyState(true);
     try {
-      const compressed = await compressImage(file);
-      const dt = new DataTransfer();
-      dt.items.add(compressed);
-      input.files = dt.files;
-      setPreviewUrl(URL.createObjectURL(compressed));
+      const compressed = await Promise.all(selected.map((f) => compressImage(f)));
+      setItems((prev) => [
+        ...prev,
+        ...compressed.map((file) => ({
+          key: crypto.randomUUID(),
+          file,
+          url: URL.createObjectURL(file),
+        })),
+      ]);
     } catch {
-      clear();
       onErrorChange?.(
         '이 이미지는 사용할 수 없어요. jpg, png, webp 이미지를 선택해 주세요.',
       );
@@ -76,57 +104,73 @@ export function ImagePicker({
     }
   }
 
+  const canAdd = items.length < MAX_IMAGES;
+
   return (
     <div className="flex flex-col gap-3">
       <input
-        ref={inputRef}
+        ref={pickerRef}
         id={id}
-        name={name}
         type="file"
+        multiple
         accept="image/jpeg,image/png,image/webp"
         onChange={handleChange}
         className="sr-only"
         tabIndex={-1}
       />
+      <input ref={submitRef} name={name} type="file" className="sr-only" tabIndex={-1} aria-hidden />
 
-      {previewUrl ? (
-        // 선택 후에는 썸네일 자체가 버튼. 모서리의 작은 카메라 배지와 안내 문구로 다시 누를 수 있음을 알려준다.
-        <div className="flex flex-col items-start gap-2">
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            aria-label="사진 변경"
-            disabled={busy}
-            className="relative size-24 overflow-hidden rounded-lg bg-muted outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
-          >
+      <ul className="flex flex-wrap gap-2">
+        {items.map((item, i) => (
+          <li key={item.key} className="relative size-24 overflow-hidden rounded-lg bg-muted">
             <Image
-              src={previewUrl}
-              alt="선택한 사진 미리보기"
+              src={item.url}
+              alt={`선택한 사진 ${i + 1}`}
               fill
               unoptimized
               className="object-cover"
             />
-            <span className="absolute right-1 bottom-1 flex size-6 items-center justify-center rounded-full bg-background/90 shadow-sm">
-              <CameraIcon className="size-3.5" />
-            </span>
-          </button>
-          <p className="text-xs text-muted-foreground">
-            {busy ? '최적화 중...' : '사진을 눌러 변경할 수 있어요'}
-          </p>
-        </div>
-      ) : (
-        <Button
-          type="button"
-          variant="outline"
-          className="h-11 w-full border-dashed text-muted-foreground aria-invalid:border-destructive"
-          onClick={() => inputRef.current?.click()}
-          aria-invalid={invalid}
-          disabled={busy}
-        >
-          <ImagePlusIcon />
-          {busy ? '최적화 중...' : '사진 추가'}
-        </Button>
-      )}
+            {i === 0 && (
+              <span className="absolute bottom-1 left-1 rounded-full bg-background/90 px-2 py-0.5 text-xs font-medium shadow-sm">
+                대표
+              </span>
+            )}
+            {/* 보이는 크기는 작은 배지, 누를 수 있는 영역은 44px */}
+            <button
+              type="button"
+              onClick={() => remove(item.key)}
+              aria-label={`사진 ${i + 1} 삭제`}
+              disabled={busy}
+              className="absolute top-0 right-0 flex size-11 items-start justify-end p-1 outline-none disabled:opacity-50"
+            >
+              <span className="flex size-6 items-center justify-center rounded-full bg-background/90 shadow-sm">
+                <XIcon className="size-3.5" />
+              </span>
+            </button>
+          </li>
+        ))}
+
+        {canAdd && (
+          <li>
+            <button
+              type="button"
+              onClick={() => pickerRef.current?.click()}
+              data-invalid={invalid ? "true" : undefined}
+              disabled={busy}
+              className="flex size-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed text-xs text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50 data-[invalid=true]:border-destructive"
+            >
+              <ImagePlusIcon className="size-5" />
+              {busy ? '최적화 중...' : `사진 추가 ${items.length}/${MAX_IMAGES}`}
+            </button>
+          </li>
+        )}
+      </ul>
+
+      <p className="text-xs text-muted-foreground">
+        {items.length > 1
+          ? '첫 번째 사진이 대표 사진이에요. 고른 순서대로 보여요.'
+          : `최대 ${MAX_IMAGES}장까지 올릴 수 있어요.`}
+      </p>
     </div>
   );
 }

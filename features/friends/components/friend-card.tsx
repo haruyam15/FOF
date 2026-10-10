@@ -5,16 +5,18 @@ import { ShareButton } from "@/features/shares/components/share-button";
 import type { FriendWithImage } from "../types";
 
 export function FriendCard({ friend, onOpen }: { friend: FriendWithImage; onOpen: () => void }) {
+  // 목록에서는 첫 번째 사진이 대표 이미지
+  const cover = friend.imageUrls[0];
   return (
     <Card className="relative">
       <CardContent className="flex gap-4">
         <div className="relative size-24 shrink-0 overflow-hidden rounded-lg bg-muted">
           <Image
-            src={friend.imageUrl ?? FALLBACK_AVATAR}
-            alt={friend.imageUrl ? `${friend.name} 사진` : `${friend.name} 기본 프로필 이미지`}
+            src={cover ?? FALLBACK_AVATAR}
+            alt={cover ? `${friend.name} 사진` : `${friend.name} 기본 프로필 이미지`}
             fill
             sizes="96px"
-            unoptimized={!friend.imageUrl}
+            unoptimized={!cover}
             className="object-cover"
           />
         </div>

@@ -9,6 +9,7 @@ export const HEIGHT_MIN = 100;
 export const HEIGHT_MAX = 230;
 export const BIRTH_YEAR_MIN = 1950;
 
+export const MAX_IMAGES = 3;
 export const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 export const IMAGE_MIME_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",

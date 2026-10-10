@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/server";
-import { IMAGE_BUCKET, IMAGE_MIME_TYPES, MAX_IMAGE_SIZE } from "./fields";
+import { IMAGE_BUCKET, IMAGE_MIME_TYPES, MAX_IMAGES, MAX_IMAGE_SIZE } from "./fields";
 import { FRIENDS_CACHE_TAG } from "./queries";
 import { createFriendSchema, type FriendFormField } from "./schema";
 
@@ -42,14 +42,15 @@ export async function createFriend(
     }
   }
 
-  const file = formData.get("image");
-  const image = file instanceof File && file.size > 0 ? file : null;
-  if (image) {
-    if (!(image.type in IMAGE_MIME_TYPES)) {
-      errors.image = "jpg, png, webp 이미지만 올릴 수 있어요.";
-    } else if (image.size > MAX_IMAGE_SIZE) {
-      errors.image = "이미지는 5MB 이하만 올릴 수 있어요.";
-    }
+  const images = formData
+    .getAll("image")
+    .filter((f): f is File => f instanceof File && f.size > 0);
+  if (images.length > MAX_IMAGES) {
+    errors.image = `사진은 최대 ${MAX_IMAGES}장까지 올릴 수 있어요.`;
+  } else if (images.some((f) => !(f.type in IMAGE_MIME_TYPES))) {
+    errors.image = "jpg, png, webp 이미지만 올릴 수 있어요.";
+  } else if (images.some((f) => f.size > MAX_IMAGE_SIZE)) {
+    errors.image = "이미지는 한 장당 5MB 이하만 올릴 수 있어요.";
   }
 
   if (!parsed.success || Object.keys(errors).length > 0) {
@@ -60,19 +61,22 @@ export async function createFriend(
   const supabase = createAdminClient();
   const id = randomUUID();
 
-  let imagePath: string | null = null;
-  if (image) {
-    imagePath = `${id}/${Date.now()}.${IMAGE_MIME_TYPES[image.type]}`;
+  // 선택한 순서대로 업로드한다. 첫 번째가 대표 이미지.
+  const imagePaths = images.map((f, i) => `${id}/${Date.now()}-${i}.${IMAGE_MIME_TYPES[f.type]}`);
+  const uploaded: string[] = [];
+  for (const [i, file] of images.entries()) {
     const { error } = await supabase.storage
       .from(IMAGE_BUCKET)
-      .upload(imagePath, Buffer.from(await image.arrayBuffer()), { contentType: image.type });
+      .upload(imagePaths[i], Buffer.from(await file.arrayBuffer()), { contentType: file.type });
     if (error) {
+      if (uploaded.length > 0) await supabase.storage.from(IMAGE_BUCKET).remove(uploaded);
       return {
         values,
         nonce: randomUUID(),
         message: "이미지 업로드에 실패했어요. 잠시 후 다시 시도해 주세요.",
       };
     }
+    uploaded.push(imagePaths[i]);
   }
 
   const { error } = await supabase.from("friends").insert({
@@ -86,11 +90,11 @@ export async function createFriend(
     residence: input.residence ?? null,
     personality: input.personality ?? null,
     ideal_type: input.idealType ?? null,
-    image_path: imagePath,
+    image_paths: imagePaths,
   });
 
   if (error) {
-    if (imagePath) await supabase.storage.from(IMAGE_BUCKET).remove([imagePath]);
+    if (imagePaths.length > 0) await supabase.storage.from(IMAGE_BUCKET).remove(imagePaths);
     return { values, nonce: randomUUID(), message: "저장에 실패했어요. 잠시 후 다시 시도해 주세요." };
   }
 
