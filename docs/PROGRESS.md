@@ -1,20 +1,27 @@
 # 진행 기록 (Progress Log)
 
 > 새 대화를 시작할 때 이 문서와 [ROADMAP](ROADMAP.md)을 먼저 읽고 이어서 작업한다.
-> 마지막 갱신: 2026-10-08 / 기준 커밋: `1f73fd3` (origin/main)
+> 마지막 갱신: 2026-10-10 / 기준 커밋: `54097e3` (origin/main)
 
 ## 1. 현재 상태 한눈에
-- **Phase 1(MVP) 기능 구현 완료**: 친구 등록, 친구 목록, 성별 필터. GitHub `main`에 push됨.
-- **아직 안 한 것**: 배포(Vercel), 모바일 실기기 점검, 페이지네이션, Phase 2 전부(로그인/관리자/삭제).
+- **Phase 1(MVP) 기능 + 임시 로그인 + 프로필 공유 + PWA 구현 완료**, GitHub `main`에 push됨. (기준 커밋 `54097e3`)
+- **배포는 아직**: Vercel 프로젝트 연결·환경변수 설정은 사용자가 진행(저장소에 `.vercel` 없음). 배포 후 폰 실기기 점검(공유 시트, 홈 화면 추가) 필요.
+- **아직 안 한 것**: Vercel 배포 확인, 모바일 실기기 점검, Phase 2 전부(Supabase Auth 로그인/admins/RLS/삭제/관리자 페이지).
 - 저장소: https://github.com/haruyam15/FOF.git (브랜치는 `main` 하나)
-- Supabase 프로젝트 생성·연결 완료. 마이그레이션 3건(`20261008000000`, `…010000`, `…020000`) 모두 적용됨(거주지 NULL 허용 확인, 사용자 확인).
+- Supabase 마이그레이션 4건(`20261008000000`, `…010000`, `…020000`, `…030000`) 모두 적용됨(사용자 확인).
+- **성능 기준: 친구 최대 100명** ([CONVENTIONS](CONVENTIONS.md) 8장).
 
 ## 2. 구현된 기능
 | 기능 | 위치 | 비고 |
 |---|---|---|
 | 친구 등록 | `/friends/new`, `features/friends/actions.ts` | Server Action, zod 서버 검증, 에러 시 입력값 복원 |
 | 친구 목록 | `/friends` | 카드 목록, 최신 등록순, 총 인원수, 빈 상태 문구 |
-| 성별 필터 | `features/friends/components/friend-filter.tsx` | 전체/남성/여성 링크 칩, URL `?gender=` |
+| 성별 필터 | `friend-filter.tsx`, `friend-list.tsx` | 전체/남성/여성 버튼. **전체 목록을 한 번 받아 클라이언트에서 필터**(서버 왕복 없음), URL `?gender=`는 `replaceState`로만 갱신 |
+| 목록 캐시 | `features/friends/queries.ts` | `unstable_cache`(30분, 태그 `friends`) + 등록 시 `updateTag`. 서명 URL(2시간)이 캐시 동안 고정돼 브라우저/이미지 최적화 캐시 적중 |
+| 임시 로그인 | `proxy.ts`, `features/auth/`, `lib/auth/`, `app/login/` | 공용 비밀번호(`ADMIN_PASSWORD`) → 서명된 httpOnly 쿠키(30일). `/login`, `/s/*` 외 전부 로그인 필요. 서버 액션·목록 조회에서도 재검사 |
+| 프로필 공유 | `features/shares/`, `app/s/[token]/` | 공유 버튼 → 링크 발급(친구당 유효 링크 재사용, 7일) → `navigator.share`(미지원 시 복사). 메시지: "소개해 드릴 친구에요.\n링크". 링크 화면은 헤더·이동 없음, noindex, 미리보기는 고정 문구 |
+| 상세 보기 | `friend-detail-modal.tsx`, `friend-profile.tsx` | 카드(사진 포함) 클릭 → 꽉 찬 화면, `FriendProfile`은 공유 화면과 같은 컴포넌트. 열 때 `pushState`, 닫기는 `history.back()`/뒤로가기 |
+| PWA | `app/manifest.ts`, `public/icon-*.png`, `app/apple-icon.png` | 홈 화면 추가용. 아이콘은 흰 배경+여백(원본 `app/icon.png`는 투명·여백 없음). 서비스 워커 없음(오프라인 미지원) |
 | 사진 업로드 | `components/image-picker.tsx`, `lib/compress-image.ts` | 브라우저에서 1600px JPEG로 자동 압축, 비공개 버킷에 저장, 목록은 1시간짜리 signed URL |
 | 기본 아바타 | `public/fallback-avatar.png` | 사진 없는 친구 카드에 표시 |
 | 공통 UI | `components/common/form-field.tsx`, `page-title.tsx` | FormField(필수 `*`/선택 표시/에러), sticky 제목 |
@@ -38,22 +45,36 @@
 | 색 체계: `primary` 진한 초록 `#4F7A3A`(주요 버튼), `brand` 연두 `#9EC188`(로고, 선택 상태, 포커스) | 로고와 버튼이 같은 색이면 구분이 안 되고 연두는 흰 배경에서 대비가 약함 |
 | 디자인 값은 `globals.css` 토큰으로만 정의 | 예: `--drop-shadow-sticky` → `drop-shadow-sticky`. 임의 값(`shadow-[...]`) 금지. [DESIGN_SYSTEM](DESIGN_SYSTEM.md) 참고 |
 | 2단계 항목 추가/삭제는 `field_definitions` + `extra jsonb` 방향 | MVP는 고정 컬럼. 필터에 쓰는 이름/성별/출생연도는 `is_system`으로 삭제 불가 ([DATA_MODEL](DATA_MODEL.md) 4장) |
+| 목록은 전체 fetch + 클라이언트 필터, 무한스크롤/페이지네이션 안 함 | 최대 100명 기준. 필터를 서버로 하면 매번 왕복(DB+서명 URL)이 생겨 모바일에서 느렸음(필터 클릭 지연의 원인). 100명 초과 조짐 시 서버 필터 + 커서 페이지네이션 도입 |
+| 서명 URL 안정화(캐시) + `next/image` 최적화 | URL이 요청마다 바뀌면 브라우저·최적화 캐시가 무력화됨. `unoptimized` 제거, `next.config.ts`에 Supabase 도메인 허용 |
+| 공유 링크는 랜덤 토큰(32바이트) + 만료 + 취소 컬럼 | URL 조작으로 다른 프로필 접근 불가(토큰 하나가 친구 1명만 가리킴). 토큰은 평문 저장(서버 service_role만 접근) |
+| 공유 링크가 생기면서 배포 URL이 노출되므로 **임시 비밀번호 로그인을 먼저 도입** | 기존 "URL 비공개" 가정이 깨짐. 공유받은 사람이 `/friends`를 직접 쳐도 로그인 화면으로 감 |
+| 로그인 세션은 자체 HMAC 쿠키(Web Crypto) | proxy(Edge 호환)에서 검증해야 함. Phase 2에서 Supabase Auth로 교체 예정 |
+| 공유 메시지는 `text` 하나에 줄바꿈+링크를 넣음 (`url` 필드 미사용) | 앱마다 text/url을 합치는 방식이 달라 줄바꿈이 보장되지 않음. 이름은 메시지·미리보기에 넣지 않음 |
+| PWA는 서비스 워커 없이 manifest만 | 설치에 필수 아님, 개인정보 화면이 기기에 캐시되는 것을 피함 |
 
 ## 4. 실제 폴더 구조
 ```
 app/
-  (main)/layout.tsx            헤더(로고+메뉴), max-w-md 컬럼
-  (main)/friends/page.tsx      목록 (Suspense + 서버 조회)
+  (main)/layout.tsx            헤더(로고+메뉴+로그아웃), max-w-md 컬럼
+  (main)/friends/page.tsx      목록 (Suspense + 서버 조회 → FriendList)
   (main)/friends/new/page.tsx  등록
+  login/                       로그인 화면(page + login-form)
+  s/layout.tsx, s/[token]/     공유 링크 화면(헤더 없음, not-found 포함)
+  manifest.ts, apple-icon.png  PWA
   globals.css                  색/그림자 토큰, full-bleed 유틸리티
+proxy.ts                       로그인 게이트 (Next 16: middleware → proxy)
 components/
-  ui/                          shadcn (base-nova 스타일, Base UI 기반)
+  ui/                          shadcn (base-nova, Base UI 기반)
   common/                      FormField, PageTitle
-features/friends/
-  actions.ts queries.ts schema.ts fields.ts types.ts
-  components/                  friend-form, friend-card, friend-filter, image-picker
-lib/                           supabase/server.ts, compress-image.ts, utils.ts
-supabase/migrations/           SQL 3건 (대시보드가 아닌 파일로 관리)
+features/
+  auth/actions.ts              login, logout
+  friends/                     actions queries schema fields types
+    components/                friend-form, friend-card, friend-filter, friend-list,
+                               friend-profile, friend-detail-modal, image-picker
+  shares/                      actions(링크 발급) queries(토큰→친구) components/share-button
+lib/                           auth/(token.ts, session.ts), supabase/server.ts, compress-image.ts, utils.ts
+supabase/migrations/           SQL 4건 (대시보드가 아닌 파일로 관리)
 docs/                          PRD, DATA_MODEL, ARCHITECTURE, CONVENTIONS, DESIGN_SYSTEM, ROADMAP, PROGRESS
 ```
 
@@ -66,6 +87,11 @@ docs/                          PRD, DATA_MODEL, ARCHITECTURE, CONVENTIONS, DESIG
 - shadcn `base-nova` 스타일은 Base UI 기반이라 Radix 예제와 API가 다르다 (`Button`에 `nativeButton={false} render={<Link/>}` 등).
 - `.env.local` 키: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `SUPABASE_JWKS_URL`. MVP에서 쓰는 건 URL, SECRET_KEY뿐 (나머지는 2단계 로그인에서 사용).
 - 실제 지인 정보가 DB에 들어 있을 수 있으므로 로그/스크린샷/이슈에 남기지 않는다.
+- **환경변수**(`.env.local`, Vercel에도 동일하게): `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `ADMIN_PASSWORD`(로컬 개발값 `2026`), `AUTH_SECRET`(배포용은 새 랜덤값 권장). `ADMIN_PASSWORD`/`AUTH_SECRET`이 없으면 전부 로그인 화면으로 가고 로그인도 실패한다. `NEXT_PUBLIC_SITE_URL`(선택)은 공유 링크 기준 주소.
+- **`navigator.share`/클립보드는 HTTPS에서만** 동작. 로컬 `http://192.168…`에서는 공유가 실패할 수 있고, 맥 크롬은 공유 시트가 없어 복사로 동작.
+- 카드의 클릭 영역은 카드 위에 깐 투명 버튼(`absolute inset-0`)이고, **DOM 순서상 내용 뒤에 둬야** 한다(사진 래퍼가 `relative`라 앞에 두면 클릭을 가로챔). 공유 버튼은 `z-10`.
+- `git mv`는 untracked 파일에 못 쓴다(그냥 `mv`). macOS `sed -i`는 `-i ''` 필요 — 파일 수정은 Edit 도구나 python 사용.
+- Node 24가 아닌 셸(20)에서 스크립트를 돌리면 환경이 다를 수 있음. 아이콘 재생성은 sharp(`node_modules/.pnpm/sharp@…`) 사용했음.
 
 ## 6. 알려진 한계 / 미확인
 - 목록은 전체 조회라 **1,000명 초과 시 Supabase 기본 한도로 일부가 조용히 잘림** → 페이지네이션 필요.
@@ -75,23 +101,29 @@ docs/                          PRD, DATA_MODEL, ARCHITECTURE, CONVENTIONS, DESIG
 - 친구 삭제 시 Storage 사진도 함께 지워야 함 (행만 지우면 파일이 남음).
 - 다크 모드 그림자가 거의 보이지 않음 (다크 모드 미설계).
 - 기본 아바타/ImagePicker 선택-변경 동작, 모바일 실기기 레이아웃은 사용자가 직접 확인 중이었음 (자동 검증은 렌더 HTML/CSS 수준까지만 함).
-- 접근 제어: **MVP는 배포 URL을 비공개로 두는 것에 의존**(로그인 없음). 링크를 아는 사람은 접속 가능.
+- 접근 제어: **공용 비밀번호 하나**(4자리 숫자 `2026`)로 보호 중. 실패 시 1초 지연만 있고 시도 횟수 제한은 없음 → 배포용은 더 긴 비밀번호로 바꾸고, Phase 2에서 Supabase Auth로 교체.
+- 공유 링크 **취소(revoke) UI 없음**(DB에 `revoked_at`만 있음). 링크는 7일 후 만료, 발급 이력 목록 없음.
+- 카카오톡 공유는 OS 공유 시트(`navigator.share`) 방식. **iOS Safari는 버튼을 누른 직후가 아니면 공유를 거부(`NotAllowedError`)할 수 있음**(서버에서 링크를 만든 뒤 호출하므로 위험) — 실기기 확인 전. 문제 시 링크 선발급 후 즉시 공유하거나 실패 시 복사로 폴백.
+- 상세 보기는 별도 URL이 없음(새로고침하면 목록으로).
+- 위 "알려진 한계" 중 '목록은 전체 조회라 1,000명 초과 시…'는 100명 기준 설계라 당분간 무시(1,000명 근처에서 재검토).
+- 이번 변경(공유/상세/로그인/PWA)의 화면·터치 동작은 자동 검증하지 못함(타입체크·린트·`curl`로 접근 제어만 확인). 사용자 실기기 확인 필요.
 
 ## 7. 다음 계획 (우선순위 순)
-### A. MVP 마무리
-1. 목록 **페이지네이션** (페이지 번호 방식, 20명 단위, `?page=`, `.range()` + `count: "exact"`, 이미지 링크는 해당 페이지분만 발급)
-2. 모바일 실기기 점검 (iPhone Safari 입력 확대, safe area, sticky 제목)
-3. **Vercel 배포** + 환경변수 설정, URL 비공개 유지 (preview URL 노출 주의)
+### A. 배포·점검 (지금 여기)
+1. **Vercel 배포**: 저장소 연결, 환경변수 4개(`SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `ADMIN_PASSWORD`(긴 값 권장), `AUTH_SECRET`(새 랜덤값)), Node 24.x 확인. 배포 주소가 정해지면 `NEXT_PUBLIC_SITE_URL` 검토.
+2. **모바일 실기기 점검(HTTPS)**: 로그인, 목록 필터 속도, 카드 클릭→상세→뒤로가기, 공유 시트(카카오톡 노출, 줄바꿈 형식), 공유 링크 화면, 홈 화면 추가(iOS Safari / Android Chrome), safe area, 입력 확대.
+3. iOS에서 공유가 `NotAllowedError`면 위 폴백 적용.
+4. 관리자 안내문: 앱 설치 방법(iOS Safari "홈 화면에 추가" / Android Chrome "앱 설치", 카카오톡 인앱 브라우저에서는 설치 불가) — 대화에서 문안 작성함, 배포 주소 넣어 전달.
 
 ### B. Phase 2 — 권한/관리자
-1. 로그인 수단 결정(카카오 vs 구글; 구현은 구글이 쉬움) → Supabase Auth 연동 (`PUBLISHABLE_KEY`, `JWKS_URL` 사용)
+1. 로그인 수단 결정(카카오 vs 구글) → Supabase Auth 연동(`PUBLISHABLE_KEY`, `JWKS_URL`), **임시 비밀번호 로그인 대체**(`lib/auth`, `proxy.ts`, `features/auth` 교체 지점)
 2. `admins` 테이블(`user_id` PK → `auth.users`), 관리자 2명 **수동 INSERT**
-3. RLS 정책 전환(관리자만 friends CRUD), 서버 접근을 `secret key`에서 사용자 세션 기반으로
-4. **친구 삭제**: 행 + Storage 사진 함께 삭제, 확인 다이얼로그
-5. **관리자 페이지**: 등록 항목 추가/삭제/필수 변경 → `field_definitions` 테이블 + `friends.extra jsonb`로 전환, 폼/목록을 필드 정의 기반으로 렌더링 (`features/friends/fields.ts`가 전환 지점)
+3. RLS 정책 전환(관리자만 friends CRUD), 서버 접근을 `secret key`에서 사용자 세션 기반으로. 공유 화면(`/s/*`)은 토큰 검증 후 서버 조회라 별도 고려
+4. **친구 삭제**: 행 + Storage 사진 함께 삭제(공유 링크는 FK cascade), 확인 다이얼로그, 삭제 시 `updateTag(FRIENDS_CACHE_TAG)`
+5. **관리자 페이지**: 등록 항목 추가/삭제/필수 변경 → `field_definitions` + `friends.extra jsonb` 전환 (`features/friends/fields.ts`가 전환 지점). 상세/공유 화면(`friend-profile.tsx`)도 필드 정의 기반으로
 
 ### C. 백로그
-출생연도 필터 복구, 친구 정보 수정, 정렬/검색, 키·직업·거주지 필터, 매칭 이력, 썸네일 생성, 이미지 로드 실패 fallback, ImagePicker 취소, 다크 모드, 디자인 토큰 확장(둥근 모서리/글자 크기/간격)
+공유 링크 취소/이력 UI, 상세 보기 별도 URL(인터셉팅 라우트), 출생연도 필터 복구, 친구 정보 수정, 정렬/검색, 키·직업·거주지 필터, 매칭 이력, 썸네일 생성, 이미지 로드 실패 fallback, ImagePicker 취소, 다크 모드, 디자인 토큰 확장, 100명 초과 시 서버 필터+커서 페이지네이션, 카카오 SDK 카드형 공유(앱 키·도메인 등록 필요), 앱 스토어 출시가 필요하면 Capacitor 래핑(서버 URL 로드 방식)
 
 ## 8. 작업 방식 (사용자 선호)
 - 응답/주석은 한국어. 코드 식별자는 영어.
