@@ -5,7 +5,7 @@
 
 ## 작업 시작 전
 1. [docs/PROGRESS.md](docs/PROGRESS.md) — 현재 상태, 결정 사항, 함정, **다음 계획** (먼저 읽는다)
-2. [docs/ROADMAP.md](docs/ROADMAP.md), [docs/CONVENTIONS.md](docs/CONVENTIONS.md), [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md)
+2. 필요할 때만 읽는다: [docs/ROADMAP.md](docs/ROADMAP.md)(계획), [docs/CONVENTIONS.md](docs/CONVENTIONS.md)(코드 규칙), [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md)(UI 작업 시), [docs/DATA_MODEL.md](docs/DATA_MODEL.md)(DB 작업 시)
 3. Next.js 코드를 쓰기 전 `node_modules/next/dist/docs/`의 관련 문서 확인 ([AGENTS.md](AGENTS.md))
 
 ## 꼭 지킬 것
